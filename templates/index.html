@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário dos Compressores</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-gauges@2.1.7/gauge.min.js"></script>
+    <style>
+        /* Ajuste para as caixas de digitação não ficarem esticadas no monitor do PC */
+        .input-medida {
+            max-width: 180px;
+            margin: 0 auto;
+        }
+
+        /* Deixando o botão switch (Liga/Desliga) maior para clicar no celular */
+        .switch-gigante {
+            width: 3.5rem !important;
+            height: 1.75rem !important;
+            cursor: pointer;
+        }
+
+        .switch-label {
+            padding-top: 0.2rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <div class="bg-dark text-white py-2 mb-4 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span><small>Operador logado:</small> <strong class="ms-1">{{ nome_usuario }}</strong></span>
+            <div>
+                {% if perfil == 'Admin' %}
+                <a href="/backup" class="btn btn-outline-success btn-sm me-2 fw-bold">💾 Fazer Backup</a>
+                <a href="/usuarios" class="btn btn-outline-info btn-sm me-2 fw-bold">Gerenciar Usuários</a>
+                {% endif %}
+                <a href="/logout" class="btn btn-danger btn-sm fw-bold">Sair do Sistema</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show text-center fw-bold" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Diário dos Compressores - Nova Leitura</h4>
+                <div>
+                    <a href="/dashboard" class="btn btn-warning btn-sm fw-bold me-2 text-dark">Painel Gerencial</a>
+                    <a href="/historico" class="btn btn-light btn-sm fw-bold text-primary">Ver Histórico</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <form action="/salvar" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label fw-bold">Data</label>
+                            <input type="date" class="form-control" name="data_leitura" required>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label fw-bold">Hora</label>
+                            <input type="time" class="form-control" name="hora_leitura" required>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label fw-bold">Compressor</label>
+                            <select class="form-select" name="id_compressor" id="select_compressor" required>
+                                <option value="">Selecione o equipamento...</option>
+                                <option value="01">Compressor Nº 01</option>
+                                <option value="02">Compressor Nº 02</option>
+                                <option value="03">Compressor Nº 03</option>
+                                <option value="04" disabled>Compressor Nº 04 (Inativo)</option>
+                                <option value="05">Compressor Nº 05</option>
+                                <option value="06">Compressor Nº 06</option>
+                                <option value="07">Compressor Nº 07</option>
+                                <option value="08">Compressor Nº 08</option>
+                                <option value="09">Compressor Nº 09</option>
+                                <option value="10">Compressor Nº 10</option>
+                                <option value="11">Compressor Nº 11</option>
+                                <option value="12">Compressor Nº 12</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-center align-items-center my-4 bg-white p-3 rounded border shadow-sm mx-auto"
+                        style="max-width: 400px;">
+                        <div class="form-check form-switch d-flex align-items-center mb-0">
+                            <input class="form-check-input mt-0 me-3 switch-gigante shadow-none" type="checkbox"
+                                role="switch" id="switch_status" checked>
+                            <label class="form-check-label fw-bold fs-5 text-success switch-label" id="label_status"
+                                for="switch_status">Compressor Ligado</label>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold text-secondary text-center mb-4">Monitoramento e Lançamento</h5>
+
+                    <div class="row mb-4 text-center justify-content-center">
+
+                        <div class="col-md-4 col-sm-6 mb-4">
+                            <canvas id="gauge_pa"></canvas>
+                            <div class="input-medida mt-2">
+                                <label class="form-label fw-bold" title="Pressão Aspiração">PA (bar)</label>
+                                <input type="number" step="0.1" class="form-control text-center fs-5" name="pa"
+                                    id="input_pa" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 col-sm-6 mb-4">
+                            <canvas id="gauge_po"></canvas>
+                            <div class="input-medida mt-2">
+                                <label class="form-label fw-bold" title="Pressão de Óleo">PO (bar)</label>
+                                <input type="number" step="0.1" class="form-control text-center fs-5" name="po"
+                                    id="input_po" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 col-sm-6 mb-4">
+                            <canvas id="gauge_pd"></canvas>
+                            <div class="input-medida mt-2">
+                                <label class="form-label fw-bold" title="Pressão Descarga">PD (bar)</label>
+                                <input type="number" step="0.1" class="form-control text-center fs-5" name="pd"
+                                    id="input_pd" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 col-sm-6 mb-4">
+                            <canvas id="gauge_to"></canvas>
+                            <div class="input-medida mt-2">
+                                <label class="form-label fw-bold" title="Temperatura do Óleo">TO (°C)</label>
+                                <input type="number" step="0.1" class="form-control text-center fs-5"
+                                    name="temperatura_oleo" id="input_to" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 col-sm-6 mb-4">
+                            <canvas id="gauge_td"></canvas>
+                            <div class="input-medida mt-2">
+                                <label class="form-label fw-bold" title="Temperatura de Descarga">TD (°C)</label>
+                                <input type="number" step="0.1" class="form-control text-center fs-5"
+                                    name="temperatura_descarga" id="input_td" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 col-sm-6 mb-4">
+                            <canvas id="gauge_cap"></canvas>
+                            <div class="input-medida mt-2">
+                                <label class="form-label fw-bold">Capacidade (%)</label>
+                                <input type="number" step="0.1" class="form-control text-center fs-5"
+                                    name="capacidade_pct" id="input_cap" required>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label fw-bold">Observações</label>
+                            <input type="text" class="form-control" name="observacoes" id="input_obs"
+                                placeholder="Alguma anormalidade?">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg w-100 fw-bold mb-4">Registrar Leitura no
+                        Sistema</button>
+
+                    <div class="alert alert-secondary mb-0 border" role="alert">
+                        <h6 class="fw-bold mb-3 border-bottom border-secondary pb-2">SIMBOLOGIA E REFERÊNCIAS</h6>
+                        <div class="row small">
+                            <div class="col-md-4">
+                                <ul class="list-unstyled mb-2">
+                                    <li><strong>PA</strong> - Pressão Aspiração</li>
+                                    <li><strong>PO</strong> - Pressão de Óleo</li>
+                                    <li><strong>PD</strong> - Pressão Descarga</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-unstyled mb-2">
+                                    <li><strong>TO</strong> - Temperatura do Óleo</li>
+                                    <li><strong>TD</strong> - Temperatura de Descarga</li>
+                                    <li><strong>C%</strong> - Capacidade</li>
+                                    <li><strong>Reg.</strong> - Regime de trabalho</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-unstyled mb-0">
+                                    <li><strong>BAR:</strong> unidade métrica de pressão</li>
+                                    <li><strong>kgf/cm²:</strong> quilograma força por cm²</li>
+                                    <li><em>1 BAR ≈ 1,01 kgf/cm²</em></li>
+                                    <li><em>Tolerância de 10 min antes e depois de cada horário.</em></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const topData = {
+            '01': { pa: [1.7, 4.0], po_tipo: 'abs', po: [6, 12], pd: [10, 14], to: [38, 60], td: [70, 110] },
+            '02': { pa: [0.5, 2.5], po_tipo: 'rel_pa', po: [1.5, 4.0], pd: [10, 14], to: [40, 70], td: [90, 130] },
+            '03': { pa: [0.5, 2.5], po_tipo: 'rel_pa', po: [1.5, 4.0], pd: [10, 14], to: [40, 70], td: [90, 130] },
+            '05': { pa: [-0.3, 0.3], po_tipo: 'rel_pa', po: [2.0, 4.0], pd: [10, 14], to: [30, 60], td: [30, 60] },
+            '06': { pa: [0.5, 2.5], po_tipo: 'rel_pa', po: [1.5, 4.0], pd: [10, 14], to: [40, 70], td: [90, 130] },
+            '07': { pa: [-0.3, 0.3], po_tipo: 'rel_pd', po: [2.0, 4.0], pd: [10, 14], to: [40, 80], td: [50, 90] },
+            '08': { pa: [1.7, 4.0], po_tipo: 'abs', po: [6, 12], pd: [10, 14], to: [33, 60], td: [70, 110] },
+            '09': { pa: [-0.3, 0.3], po_tipo: 'abs', po: [6, 12], pd: [10, 14], to: [38, 60], td: [80, 110] },
+            '10': { pa: [-0.3, 0.3], po_tipo: 'abs', po: [2.0, 4.5], pd: [10, 14], to: [43, 55], td: [43, 55] },
+            '11': { pa: [-0.3, 0.3], po_tipo: 'rel_pd', po: [2.0, 4.0], pd: [10, 14], to: [45, 70], td: [70, 90] },
+            '12': { pa: [-0.3, 0.3], po_tipo: 'rel_pd', po: [2.0, 5.0], pd: [10, 14], to: [37, 70], td: [55, 80] }
+        };
+
+        var configGeral = {
+            width: 180, height: 180, colorPlate: "#fff", colorBarProgress: "#CC2936",
+            borderShadowWidth: 0, borders: false, needleType: "arrow", needleWidth: 3,
+            needleCircleSize: 7, needleCircleOuter: true, needleCircleInner: false,
+            animationDuration: 300, animationRule: "linear"
+        };
+
+        var gaugePA = new RadialGauge(Object.assign({}, configGeral, { renderTo: 'gauge_pa', title: "Aspiração (PA)", units: "bar", minValue: -1, maxValue: 5, majorTicks: ["-1", "0", "1", "2", "3", "4", "5"], minorTicks: 5 })).draw();
+        var gaugePO = new RadialGauge(Object.assign({}, configGeral, { renderTo: 'gauge_po', title: "Óleo (PO)", units: "bar", minValue: 0, maxValue: 20, majorTicks: ["0", "5", "10", "15", "20"], minorTicks: 5 })).draw();
+        var gaugePD = new RadialGauge(Object.assign({}, configGeral, { renderTo: 'gauge_pd', title: "Descarga (PD)", units: "bar", minValue: 0, maxValue: 20, majorTicks: ["0", "5", "10", "15", "20"], minorTicks: 5 })).draw();
+        var gaugeTO = new RadialGauge(Object.assign({}, configGeral, { renderTo: 'gauge_to', title: "Temp. Óleo", units: "°C", minValue: 0, maxValue: 130, majorTicks: ["0", "30", "60", "90", "130"], minorTicks: 5 })).draw();
+        var gaugeTD = new RadialGauge(Object.assign({}, configGeral, { renderTo: 'gauge_td', title: "Temp. Desc.", units: "°C", minValue: 0, maxValue: 140, majorTicks: ["0", "35", "70", "105", "140"], minorTicks: 5 })).draw();
+        var gaugeCAP = new RadialGauge(Object.assign({}, configGeral, { renderTo: 'gauge_cap', title: "Capacidade", units: "%", minValue: 0, maxValue: 100, majorTicks: ["0", "25", "50", "75", "100"], minorTicks: 5, highlights: [{ from: 90, to: 100, color: "rgba(0, 200, 0, .4)" }] })).draw();
+
+        window.onload = function () {
+            const agora = new Date();
+            const ano = agora.getFullYear();
+            const mes = String(agora.getMonth() + 1).padStart(2, '0');
+            const dia = String(agora.getDate()).padStart(2, '0');
+            document.querySelector('input[name="data_leitura"]').value = `${ano}-${mes}-${dia}`;
+            const horas = String(agora.getHours()).padStart(2, '0');
+            const minutos = String(agora.getMinutes()).padStart(2, '0');
+            document.querySelector('input[name="hora_leitura"]').value = `${horas}:${minutos}`;
+        };
+
+        function recalcularZonasVerdes() {
+            let compSelecionado = document.getElementById('select_compressor').value;
+            let regras = topData[compSelecionado];
+
+            if (!regras) {
+                gaugePA.update({ highlights: [] }); gaugePO.update({ highlights: [] }); gaugePD.update({ highlights: [] });
+                gaugeTO.update({ highlights: [] }); gaugeTD.update({ highlights: [] });
+                atualizarCoresInputs(null);
+                return;
+            }
+
+            gaugePA.update({ highlights: [{ from: regras.pa[0], to: regras.pa[1], color: "rgba(0, 200, 0, .4)" }] });
+            gaugePD.update({ highlights: [{ from: regras.pd[0], to: regras.pd[1], color: "rgba(0, 200, 0, .4)" }] });
+            gaugeTO.update({ highlights: [{ from: regras.to[0], to: regras.to[1], color: "rgba(0, 200, 0, .4)" }] });
+            gaugeTD.update({ highlights: [{ from: regras.td[0], to: regras.td[1], color: "rgba(0, 200, 0, .4)" }] });
+
+            let valPA = parseFloat(document.getElementById('input_pa').value) || 0;
+            let valPD = parseFloat(document.getElementById('input_pd').value) || 0;
+            let poMin = 0, poMax = 0;
+
+            if (regras.po_tipo === 'abs') { poMin = regras.po[0]; poMax = regras.po[1]; }
+            else if (regras.po_tipo === 'rel_pa') { poMin = valPA + regras.po[0]; poMax = valPA + regras.po[1]; }
+            else if (regras.po_tipo === 'rel_pd') { poMin = valPD + regras.po[0]; poMax = valPD + regras.po[1]; }
+
+            gaugePO.update({ highlights: [{ from: poMin, to: poMax, color: "rgba(0, 200, 0, .4)" }] });
+            atualizarCoresInputs(regras, poMin, poMax);
+        }
+
+        function atualizarCoresInputs(regras, poMin = 0, poMax = 0) {
+            let inputs = ['pa', 'po', 'pd', 'to', 'td'].map(id => document.getElementById('input_' + id));
+
+            function applyColor(el, val, min, max) {
+                if (isNaN(val) || el.value === '') { el.style.color = ''; el.style.fontWeight = ''; return; }
+                el.style.fontWeight = '900';
+                if (val < min) el.style.color = '#0d6efd';
+                else if (val > max) el.style.color = '#dc3545';
+                else el.style.color = '#198754';
+            }
+
+            if (!regras) { inputs.forEach(el => applyColor(el, NaN, 0, 0)); return; }
+
+            applyColor(inputs[0], parseFloat(inputs[0].value), regras.pa[0], regras.pa[1]);
+            applyColor(inputs[1], parseFloat(inputs[1].value), poMin, poMax);
+            applyColor(inputs[2], parseFloat(inputs[2].value), regras.pd[0], regras.pd[1]);
+            applyColor(inputs[3], parseFloat(inputs[3].value), regras.to[0], regras.to[1]);
+            applyColor(inputs[4], parseFloat(inputs[4].value), regras.td[0], regras.td[1]);
+        }
+
+        document.getElementById('select_compressor').addEventListener('change', recalcularZonasVerdes);
+
+        ['pa', 'po', 'pd', 'to', 'td', 'cap'].forEach(id => {
+            document.getElementById('input_' + id).addEventListener('input', function (e) {
+                if (id === 'pa') gaugePA.value = e.target.value || 0;
+                if (id === 'po') gaugePO.value = e.target.value || 0;
+                if (id === 'pd') gaugePD.value = e.target.value || 0;
+                if (id === 'to') gaugeTO.value = e.target.value || 0;
+                if (id === 'td') gaugeTD.value = e.target.value || 0;
+                if (id === 'cap') gaugeCAP.value = e.target.value || 0;
+                recalcularZonasVerdes();
+            });
+        });
+
+        // --- LÓGICA: INTERRUPTOR LIGA/DESLIGA ---
+        document.getElementById('switch_status').addEventListener('change', function (e) {
+            let isLigado = e.target.checked;
+            let label = document.getElementById('label_status');
+            let inputs = ['pa', 'po', 'pd', 'to', 'td', 'cap'].map(id => document.getElementById('input_' + id));
+            let obs = document.getElementById('input_obs');
+
+            if (isLigado) {
+                // Volta ao normal (Ligado)
+                label.innerText = "Compressor Ligado";
+                label.classList.remove('text-danger');
+                label.classList.add('text-success');
+                inputs.forEach(el => {
+                    el.readOnly = false;
+                    el.value = '';
+                    el.dispatchEvent(new Event('input')); // Limpa os relógios
+                });
+                if (obs.value === "COMPRESSOR DESLIGADO") obs.value = "";
+                recalcularZonasVerdes();
+            } else {
+                // Entra em modo Stand-by/Desligado
+                label.innerText = "Compressor Desligado";
+                label.classList.remove('text-success');
+                label.classList.add('text-danger');
+                inputs.forEach(el => {
+                    el.readOnly = true;
+                    el.value = '0';
+                    el.dispatchEvent(new Event('input')); // Zera os relógios
+                });
+                obs.value = "COMPRESSOR DESLIGADO";
+            }
+        });
+
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

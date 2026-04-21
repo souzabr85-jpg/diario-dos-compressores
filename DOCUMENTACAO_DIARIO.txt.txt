@@ -1,0 +1,84 @@
+================================================================================
+               DOCUMENTAÇÃO OFICIAL - DIÁRIO DOS COMPRESSORES v1.0
+================================================================================
+
+1. VISÃO GERAL DO PROJETO
+--------------------------------------------------------------------------------
+O "Diário dos Compressores" é um sistema web industrial (SCADA-lite) criado para 
+digitalizar e automatizar o registro de parâmetros operacionais da sala de 
+máquinas (frigorífico/fábrica). 
+
+O projeto substituiu as antigas pranchetas de papel por uma aplicação responsiva, 
+inteligente e segura, capaz de guiar o operador durante a ronda, alertar sobre 
+anomalias em tempo real e fornecer dados consolidados para a diretoria.
+
+2. TECNOLOGIAS UTILIZADAS (STACK)
+--------------------------------------------------------------------------------
+- Back-end: Python com microframework Flask.
+- Banco de Dados: SQLite (Serverless, arquivo único 'compressores.db').
+- Front-end: HTML5, CSS3 (Bootstrap 5) e JavaScript.
+- Visualização de Dados: CanvasGauges (relógios industriais) e Chart.js (gráficos).
+- Segurança: Werkzeug (Hashes de senha), Flask-WTF (Proteção CSRF) e Flask-Limiter.
+- Isolamento: Ambiente Virtual Python (venv).
+
+3. FUNCIONALIDADES PRINCIPAIS E INTELIGÊNCIA EMBARCADA
+--------------------------------------------------------------------------------
+A. Interface de Lançamento Inteligente (Supervisório)
+- Relógios analógicos dinâmicos renderizados na tela.
+- "Inteligência de Máquina": O sistema possui os manuais de fábrica de 11 
+  compressores diferentes gravados no código. Ao selecionar a máquina, as zonas 
+  verdes (faixas ideais de trabalho) dos relógios se ajustam sozinhas.
+- Cálculo Dinâmico de Óleo: O sistema entende se a Pressão de Óleo (PO) daquela 
+  máquina específica deve ser calculada de forma Absoluta, Relativa à Aspiração 
+  (PA) ou Relativa à Descarga (PD).
+- UI Reativa: Enquanto o operador digita (usando apenas 1 casa decimal para 
+  agilidade), os números mudam de cor instantaneamente (Azul = Baixo, 
+  Verde = Normal, Vermelho = Alto/Perigo).
+
+B. Otimização para Chão de Fábrica (Mobile-First)
+- Layout desenhado para operação com uma mão via smartphone no Wi-Fi da fábrica.
+- Campos de digitação acoplados logo abaixo de seus respectivos relógios.
+- Chave "Stand-by" (Interruptor Liga/Desliga): Com um toque, o sistema bloqueia 
+  os campos, zera os relógios e registra automaticamente a máquina como "DESLIGADA", 
+  poupando tempo do operador.
+- Rodapé com a Simbologia oficial, servindo de manual de consulta rápida.
+
+C. Histórico e Painel Gerencial
+- Tabela de histórico que aplica a inteligência de cores de forma retroativa, 
+  permitindo bater o olho e achar falhas passadas.
+- Exportação de dados brutos para Excel (.csv) com um clique.
+- Dashboard gráfico para análise de tendências operacionais.
+
+D. Segurança de Nível Corporativo
+- Sistema de Login com Sessões Criptografadas (expiração em 8h).
+- Proteção contra Força Bruta (Rate Limiting de 5 tentativas por minuto).
+- Proteção CSRF em todos os formulários para bloquear requisições forjadas.
+- Senhas salvas com Hash unidirecional (ninguém, nem o banco de dados, sabe a senha real).
+- Controle de Acesso Baseado em Funções (RBAC):
+  * Operador: Pode apenas registrar dados e visualizar históricos.
+  * Admin: Pode gerenciar usuários, deletar registros incorretos e acessar o 
+    botão "Fazer Backup".
+- Backup One-Click: O supervisor clica em um botão e o sistema faz o download 
+  de um clone perfeito do banco de dados (arquivo .db) para máxima resiliência.
+
+4. COMO EXECUTAR O SERVIDOR
+--------------------------------------------------------------------------------
+1. Abra o terminal (PowerShell) na pasta do projeto.
+2. Desbloqueie a execução de scripts (se necessário): 
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+3. Ative o ambiente virtual:
+   .\venv\Scripts\Activate.ps1
+4. Inicie o motor do servidor:
+   python app.py
+5. O sistema estará no ar e acessível por qualquer celular conectado à mesma 
+   rede Wi-Fi através do IP do computador (ex: 192.168.x.x:5000).
+
+5. IMPACTO DO PROJETO
+--------------------------------------------------------------------------------
+A implementação deste sistema reduz erros de caligrafia, elimina o uso de papel, 
+garante a rastreabilidade de quem realizou a leitura (auditoria) e transforma 
+dados mortos em informação ativa para a manutenção preventiva e preditiva.
+
+================================================================================
+                       Desenvolvido com excelência técnica.
+================================================================================

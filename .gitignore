@@ -1,0 +1,11 @@
+# Ambientes Virtuais
+venv/
+env/
+
+# Arquivos de Segurança e Banco de Dados
+compressores.db
+.secret_key
+
+# Arquivos temporários do Python
+__pycache__/
+*.pyc
